@@ -1,0 +1,30 @@
+name: Build OpenIPC TC2101
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssc335:
+    name: SSC335
+    uses: ./.github/workflows/firmware.yml
+    permissions:
+      contents: write
+    with:
+      soc: ssc335
+    secrets:
+      CUSTOMIZE_SCRIPT: ${{ secrets.CUSTOMIZE_SCRIPT }}
+
+  ssc337:
+    name: SSC337
+    uses: ./.github/workflows/firmware.yml
+    permissions:
+      contents: write
+    with:
+      soc: ssc337
+    secrets:
+      CUSTOMIZE_SCRIPT: ${{ secrets.CUSTOMIZE_SCRIPT }}
