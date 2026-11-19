@@ -1,0 +1,26 @@
+{
+  "firmware": {
+    "url": "https://github.com/OpenIPC/firmware.git",
+    "commit": "bdd95ba50d756933a2568ac671c03c4307d6f418"
+  },
+  "builder": {
+    "url": "https://github.com/OpenIPC/builder.git",
+    "commit": "c0f1a5a1e7ba24805bb7e8a76fa8f51b0377c663"
+  },
+  "kernel_commit": "25c4859774fc27a1356b098dd8153fd69e74b548",
+  "wifi_commit": "d488596918d4e339bc9b5dd3bbeabea1751b97e5",
+  "sensor_sha256": "d07c9d403ed7fb4148a832ebc65e71e26d577fc047a084eb499952998073cd3b",
+  "downloads": [
+    {
+      "path": "majestic/majestic.infinity6b0.lite.master.tar.bz2",
+      "url": "https://openipc.s3-eu-west-1.amazonaws.com/majestic.infinity6b0.lite.master.tar.bz2?versionId=n9oUGOCeROH_wZn3O8HSQjBzznG1AeFw",
+      "sha256": "2b8cf50641123ed46b708f5daf24f584a8df729565c1128a3741c4f25869891b"
+    },
+    {
+      "path": "majestic-webui/majestic-webui-dist.tar.gz",
+      "url": "https://github.com/OpenIPC/majestic-webui/releases/download/dist/majestic-webui-dist.tar.gz",
+      "sha256": "b808b48650eff7a5cc29c1d7e5c09ed76035677b4c074d80f6a9ac02f7ff3168"
+    }
+  ],
+  "yaml_cli_commit": "dbde3bdd957e8232ecadfe87e7f6e06d09d65224"
+}

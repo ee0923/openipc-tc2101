@@ -1,0 +1,70 @@
+name: Clean OpenIPC TC2101 build history
+
+on:
+  workflow_run:
+    workflows: [Build OpenIPC TC2101]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency: tc2101-history-cleanup
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Delete old completed runs without removing firmware artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TRIGGER_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          latest=$(gh api "repos/$GH_REPO/actions/workflows/build.yml/runs?branch=main&per_page=1" \
+            --jq '.workflow_runs[0] | if . then [.id, .status] | @tsv else "0\tcompleted" end')
+          IFS=$'\t' read -r preserve_build latest_status <<< "$latest"
+          if [[ "$latest_status" != completed || ( -n "$TRIGGER_RUN" && "$TRIGGER_RUN" != "$preserve_build" ) ]]; then
+            echo "Leave history in place until the newest main build finishes"
+            exit 0
+          fi
+          candidates="$RUNNER_TEMP/tc2101-completed-runs.tsv"
+          : > "$candidates"
+          for workflow in build.yml cleanup.yml; do
+            gh api --paginate "repos/$GH_REPO/actions/workflows/$workflow/runs?status=completed&per_page=100" \
+              --jq '.workflow_runs[] | [.id, .run_attempt, .path] | @tsv' >> "$candidates"
+          done
+          while IFS=$'\t' read -r id attempt path; do
+            [[ "$id" =~ ^[1-9][0-9]*$ && "$attempt" =~ ^[1-9][0-9]*$ ]] || exit 2
+            [[ "$id" != "$GITHUB_RUN_ID" && "$id" != "$TRIGGER_RUN" && "$id" != "$preserve_build" ]] || continue
+            case "$path" in
+              .github/workflows/build.yml|.github/workflows/cleanup.yml) ;;
+              *) exit 2 ;;
+            esac
+            if ! current=$(gh api "repos/$GH_REPO/actions/runs/$id" 2>&1); then
+              [[ "$current" == *"(HTTP 404)"* ]] && continue
+              printf '%s\n' "$current" >&2
+              exit 1
+            fi
+            jq -e --argjson attempt "$attempt" --arg path "$path" \
+              '.status == "completed" and .run_attempt == $attempt and .path == $path' \
+              <<< "$current" >/dev/null || continue
+            if [[ "$path" == .github/workflows/build.yml ]]; then
+              active_artifacts=$(gh api --paginate --slurp "repos/$GH_REPO/actions/runs/$id/artifacts?per_page=100" \
+                | jq '[.[].artifacts[] | select(.expired == false)] | length')
+              if [[ "$active_artifacts" != 0 ]]; then
+                echo "Keep build $id: $active_artifacts downloadable artifacts"
+                continue
+              fi
+            fi
+            if ! result=$(gh api --method DELETE "repos/$GH_REPO/actions/runs/$id" 2>&1); then
+              [[ "$result" == *"(HTTP 404)"* ]] && continue
+              printf '%s\n' "$result" >&2
+              exit 1
+            fi
+            echo "Deleted historical run $id"
+          done < "$candidates"
